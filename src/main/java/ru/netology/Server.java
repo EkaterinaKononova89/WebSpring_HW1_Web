@@ -10,14 +10,16 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
 import java.util.List;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 
 
 public class Server {
-    final List<String> validPaths = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html", "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
+    //final List<String> validPaths = List.of("/index.html", "/spring.svg", "/spring.png", "/resources.html", "/styles.css", "/app.js", "/links.html", "/forms.html", "/classic.html", "/events.html", "/events.js");
+    ConcurrentHashMap<String, Handler> handlers = new ConcurrentHashMap<>();
     final ExecutorService threadPool = Executors.newFixedThreadPool(64);
-    static int i = 0;
+
 
     public void startServer(int port) {
 
@@ -35,11 +37,10 @@ public class Server {
                     });
                 } catch (IOException e) {
                     throw new IOException();
-                } finally {  // нужен ли этот блок?
+                } finally {  // нужен ли этот блок
                 }
             }
-        } catch (
-                IOException e) {
+        } catch (IOException e) {
             e.printStackTrace();
         }
     }
@@ -48,8 +49,10 @@ public class Server {
         try (final var in = new BufferedReader(new InputStreamReader(socket.getInputStream()));
              final var out = new BufferedOutputStream(socket.getOutputStream())) {
 
-            // read only request line for simplicity
-            // must be in form GET /path HTTP/1.1
+            Request request = new Request(socket);
+
+    // парсинг реквест-лайн
+
             final var requestLine = in.readLine();
             final var parts = requestLine.split(" ");
 
@@ -58,8 +61,23 @@ public class Server {
                 return;
             }
 
-            final var path = parts[1];
-            if (!validPaths.contains(path)) {
+            final var methodRequest = parts[0]; // метод
+            request.setMethod(methodRequest);
+
+            final var path = parts[1]; // путь
+            if(!path.startsWith("/")){
+                return;
+            }
+            request.setPath(path);
+
+//            final var httpVersion = parts[2]; // версия http для полноты картины?
+//            request.setHttpVersion(httpVersion);
+
+    // поиск хендлера
+            if(handlers.containsKey(request.getMethod() + request.getPath())) {
+                Handler handler = handlers.get(request.getMethod() + request.getPath());
+                handler.handle(request, new BufferedOutputStream(request.getSocket().getOutputStream()));
+            } else {
                 out.write((
                         "HTTP/1.1 404 Not Found\r\n" +
                                 "Content-Length: 0\r\n" +
@@ -70,41 +88,32 @@ public class Server {
                 return;
             }
 
-            final var filePath = Path.of(".", "public", path);
-            final var mimeType = Files.probeContentType(filePath);
+    // парсим заголовки и тело запроса
+            StringBuilder otherHeadersSb = new StringBuilder();
 
-            // special case for classic
-            if (path.equals("/classic.html")) {
-                final var template = Files.readString(filePath);
-                final var content = template.replace(
-                        "{time}",
-                        LocalDateTime.now().toString()
-                ).getBytes();
-                out.write((
-                        "HTTP/1.1 200 OK\r\n" +
-                                "Content-Type: " + mimeType + "\r\n" +
-                                "Content-Length: " + content.length + "\r\n" +
-                                "Connection: close\r\n" +
-                                "\r\n"
-                ).getBytes());
-                out.write(content);
-                out.flush();
-                socket.close();
+            while (in.readLine() != null) {
+                otherHeadersSb.append(in.readLine());
+                otherHeadersSb.append("\n");
             }
+            String otherHeaders = otherHeadersSb.toString();
 
-            final var length = Files.size(filePath);
-            out.write((
-                    "HTTP/1.1 200 OK\r\n" +
-                            "Content-Type: " + mimeType + "\r\n" +
-                            "Content-Length: " + length + "\r\n" +
-                            "Connection: close\r\n" +
-                            "\r\n"
-            ).getBytes());
-            Files.copy(filePath, out);
-            out.flush();
+            if (otherHeaders.contains("\r\n\r\n") && !otherHeaders.endsWith("\r\n\r\n")) {
+                final var partsHeadersAndBody = otherHeaders.split("\r\n\r\n");
+                final var headers = partsHeadersAndBody[0];
+                final var body = partsHeadersAndBody[1];
+                request.setHeaders(headers);
+                request.setBody(body);
+            } else {
+                request.setHeaders(otherHeaders);
+                request.setBody(null);
+            }
         } catch (
                 IOException e) {
             e.printStackTrace();
         }
+    }
+
+    public void addHandler(String method, String path, Handler handler) {
+        handlers.put(method+path, handler);
     }
 }
