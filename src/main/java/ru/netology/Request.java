@@ -1,11 +1,15 @@
 package ru.netology;
 
+import org.apache.http.NameValuePair;
+
 import java.net.Socket;
+import java.util.List;
 
 public class Request {
     private final Socket socket;
     private String method;
     private String path;
+    private List<NameValuePair> queryParams;
     private String headers;
     private String body;
 
@@ -47,6 +51,23 @@ public class Request {
 
     public String getBody() {
         return body;
+    }
+
+    public void setQueryParams(List<NameValuePair> list) { //NameValuePair
+        this.queryParams = list;
+    }
+
+    public List<NameValuePair> getQueryParams() {
+        return queryParams;
+    }
+
+    public String getQueryParam(String name) {
+        for (NameValuePair nvp : queryParams) {
+            if (nvp.getName().equals(name)) {
+                return nvp.getValue();
+            }
+        }
+        return null;
     }
 
     public String toString() {

@@ -1,5 +1,6 @@
 package ru.netology;
 
+
 import java.io.File;
 import java.io.FileOutputStream;
 import java.io.IOException;
@@ -14,19 +15,19 @@ public class Main {
         final int port = 9999;
 
         // создала папку для новых файлов
-        File dir = new File("C:/Netology/");
-        if(dir.mkdir()){
+        File dir = new File("./publicNew");
+        if (dir.mkdir()) {
             System.out.println("OK");
         } else if (dir.exists()) {
-                System.out.println("exist yet");
-            } else {
+            System.out.println("exist yet");
+        } else {
             System.out.println("dir error");
         }
 
         server.addHandler("GET", "/messages", (request, responseStream) -> {
-        // создаю новый файл
+            // создаю новый файл
             File file = new File(dir, "/messages.txt");
-            if(file.createNewFile()) {
+            if (file.createNewFile()) {
                 try (FileOutputStream fos = new FileOutputStream(file)) {
                     String text = "Create message in new file";
                     byte[] bytes = text.getBytes();
@@ -37,8 +38,8 @@ public class Main {
             } else {
                 System.out.println("Файл не создан. Скорее всего файл с таким названием уже существует");
             }
-        // отправляю этот файл в качестве ответа
-            final var filePath = Path.of("C:/Netology", "/messages.txt");
+            // отправляю этот файл в качестве ответа
+            final var filePath = Path.of("./publicNew", "/messages.txt");
             final var mimeType = Files.probeContentType(filePath);
 
             final var length = Files.size(filePath);
@@ -53,12 +54,13 @@ public class Main {
             responseStream.flush();
         });
 
+// ДЗ 2, задача №1, открывается через FormsForRequest.html
         server.addHandler("GET", "/hello", (request, responseStream) -> {
-        // создаю новый файл
+            // создаю новый файл
             File file = new File(dir, "/hello.txt"); //
-            if(file.createNewFile()) {
+            if (file.createNewFile()) {
                 try (FileOutputStream fos = new FileOutputStream(file)) {
-                    String text = "Hello from Ekaterinburg!";
+                    String text = "{name}, hello from Ekaterinburg!";
                     byte[] bytes = text.getBytes();
                     fos.write(bytes, 0, bytes.length);
                 } catch (IOException e) {
@@ -67,26 +69,33 @@ public class Main {
             } else {
                 System.out.println("Файл не создан. Скорее всего файл с таким названием уже существует");
             }
-        // отправляю этот файл в качестве ответа
-            final var filePath = Path.of("C:/Netology", "/hello.txt");
+            // отправляю этот файл в качестве ответа
+            final var filePath = Path.of("./publicNew", "/hello.txt");
             final var mimeType = Files.probeContentType(filePath);
 
-            final var length = Files.size(filePath);
+            final var template = Files.readString(filePath);
+            final var content = template.replace(
+                    "{name}",
+                    request.getQueryParam("name") + " " +
+                            request.getQueryParam("surname")
+            ).getBytes();
+
             responseStream.write((
                     "HTTP/1.1 200 OK\r\n" +
                             "Content-Type: " + mimeType + "\r\n" +
-                            "Content-Length: " + length + "\r\n" +
+                            "Content-Length: " + content.length + "\r\n" +
                             "Connection: close\r\n" +
                             "\r\n"
             ).getBytes());
-            Files.copy(filePath, responseStream);
+
+            responseStream.write(content);
             responseStream.flush();
         });
 
         server.addHandler("GET", "/time", (request, responseStream) -> {
-        // создаю новый файл
+            // создаю новый файл
             File file = new File(dir, "/time.txt"); //
-            if(file.createNewFile()) {
+            if (file.createNewFile()) {
                 try (FileOutputStream fos = new FileOutputStream(file)) {
                     String text = "Current time {time}";
                     byte[] bytes = text.getBytes();
@@ -98,8 +107,8 @@ public class Main {
             } else {
                 System.out.println("Файл не создан. Скорее всего файл с таким названием уже существует");
             }
-        // отправляю с заменой контента
-            final var filePath = Path.of("C:/Netology", "/time.txt");
+            // отправляю с заменой контента
+            final var filePath = Path.of("./publicNew", "/time.txt");
             final var mimeType = Files.probeContentType(filePath);
 
             DateTimeFormatter dtf = DateTimeFormatter.ofPattern("HH:mm:ss");

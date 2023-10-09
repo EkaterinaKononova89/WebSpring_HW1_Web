@@ -1,11 +1,14 @@
 package ru.netology;
 
+import org.apache.http.client.utils.URLEncodedUtils;
+
 import java.io.BufferedOutputStream;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
 import java.net.ServerSocket;
 import java.net.Socket;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.time.LocalDateTime;
@@ -51,33 +54,40 @@ public class Server {
 
             Request request = new Request(socket);
 
-    // парсинг реквест-лайн
+            // парсинг реквест-лайн
 
             final var requestLine = in.readLine();
+
             final var parts = requestLine.split(" ");
 
             if (parts.length != 3) {
-                // just close socket
                 return;
             }
 
             final var methodRequest = parts[0]; // метод
             request.setMethod(methodRequest);
 
-            final var path = parts[1]; // путь
-            if(!path.startsWith("/")){
+            final var fullPath = parts[1]; // путь
+            if (!fullPath.startsWith("/")) {
                 return;
             }
-            request.setPath(path);
+
+            final var requestURL = URLEncodedUtils.parse(fullPath, StandardCharsets.UTF_8, '?', '&');
+
+            request.setPath(requestURL.get(0).toString()); // главный путь
+
+            requestURL.remove(0);
+            request.setQueryParams(requestURL);
 
 //            final var httpVersion = parts[2]; // версия http для полноты картины?
 //            request.setHttpVersion(httpVersion);
 
-    // поиск хендлера
-            if(handlers.containsKey(request.getMethod() + request.getPath())) {
+            // поиск хендлера
+            if (handlers.containsKey(request.getMethod() + request.getPath())) {
                 Handler handler = handlers.get(request.getMethod() + request.getPath());
                 handler.handle(request, new BufferedOutputStream(request.getSocket().getOutputStream()));
             } else {
+                System.out.println("запрос не подходит");
                 out.write((
                         "HTTP/1.1 404 Not Found\r\n" +
                                 "Content-Length: 0\r\n" +
@@ -88,7 +98,7 @@ public class Server {
                 return;
             }
 
-    // парсим заголовки и тело запроса
+            // парсим заголовки и тело запроса
             StringBuilder otherHeadersSb = new StringBuilder();
 
             while (in.readLine() != null) {
@@ -114,6 +124,6 @@ public class Server {
     }
 
     public void addHandler(String method, String path, Handler handler) {
-        handlers.put(method+path, handler);
+        handlers.put(method + path, handler);
     }
 }
