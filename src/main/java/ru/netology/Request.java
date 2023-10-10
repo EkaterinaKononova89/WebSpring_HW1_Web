@@ -4,6 +4,7 @@ import org.apache.http.NameValuePair;
 
 import java.net.Socket;
 import java.util.List;
+import java.util.stream.Collectors;
 
 public class Request {
     private final Socket socket;
@@ -53,7 +54,7 @@ public class Request {
         return body;
     }
 
-    public void setQueryParams(List<NameValuePair> list) { //NameValuePair
+    public void setQueryParams(List<NameValuePair> list) {
         this.queryParams = list;
     }
 
@@ -61,13 +62,10 @@ public class Request {
         return queryParams;
     }
 
-    public String getQueryParam(String name) {
-        for (NameValuePair nvp : queryParams) {
-            if (nvp.getName().equals(name)) {
-                return nvp.getValue();
-            }
-        }
-        return null;
+    public List<NameValuePair> getQueryParam(String name) {
+        return queryParams.stream()
+                .filter(x -> x.getName().equals(name))
+                .collect(Collectors.toList());
     }
 
     public String toString() {

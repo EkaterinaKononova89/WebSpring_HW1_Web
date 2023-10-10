@@ -76,8 +76,8 @@ public class Main {
             final var template = Files.readString(filePath);
             final var content = template.replace(
                     "{name}",
-                    request.getQueryParam("name") + " " +
-                            request.getQueryParam("surname")
+                    request.getQueryParam("name").get(0).getValue() + " " +
+                            request.getQueryParam("surname").get(0).getValue()
             ).getBytes();
 
             responseStream.write((
