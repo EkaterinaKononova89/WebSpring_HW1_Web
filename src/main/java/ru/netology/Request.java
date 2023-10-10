@@ -6,13 +6,14 @@ import java.net.Socket;
 import java.util.List;
 import java.util.stream.Collectors;
 
+
 public class Request {
     private final Socket socket;
     private String method;
     private String path;
-    private List<NameValuePair> queryParams;
     private String headers;
     private String body;
+    private List<NameValuePair> queryParams;
 
     public Request(Socket socket) {
         this.socket = socket;

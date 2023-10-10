@@ -54,10 +54,9 @@ public class Server {
 
             Request request = new Request(socket);
 
-            // парсинг реквест-лайн
+    // парсинг реквест-лайн
 
             final var requestLine = in.readLine();
-
             final var parts = requestLine.split(" ");
 
             if (parts.length != 3) {
@@ -68,7 +67,7 @@ public class Server {
             request.setMethod(methodRequest);
 
             final var fullPath = parts[1]; // путь
-            if (!fullPath.startsWith("/")) {
+            if(!fullPath.startsWith("/")){
                 return;
             }
 
@@ -76,21 +75,17 @@ public class Server {
 
             request.setPath(requestURL.get(0).toString()); // главный путь
 
-
             requestURL.remove(0);
             request.setQueryParams(requestURL);
-
 
 //            final var httpVersion = parts[2]; // версия http для полноты картины?
 //            request.setHttpVersion(httpVersion);
 
-            // поиск хендлера
-            if (handlers.containsKey(request.getMethod() + request.getPath())) {
-                System.out.println("запрос подходит");
+    // поиск хендлера
+            if(handlers.containsKey(request.getMethod() + request.getPath())) {
                 Handler handler = handlers.get(request.getMethod() + request.getPath());
                 handler.handle(request, new BufferedOutputStream(request.getSocket().getOutputStream()));
             } else {
-                System.out.println("запрос не подходит");
                 out.write((
                         "HTTP/1.1 404 Not Found\r\n" +
                                 "Content-Length: 0\r\n" +
@@ -101,7 +96,7 @@ public class Server {
                 return;
             }
 
-            // парсим заголовки и тело запроса
+    // парсим заголовки и тело запроса
             StringBuilder otherHeadersSb = new StringBuilder();
 
             while (in.readLine() != null) {
@@ -109,20 +104,13 @@ public class Server {
                 otherHeadersSb.append("\n");
             }
             String otherHeaders = otherHeadersSb.toString();
-            System.out.println(otherHeaders);
 
             if (otherHeaders.contains("\r\n\r\n") && !otherHeaders.endsWith("\r\n\r\n")) {
-
                 final var partsHeadersAndBody = otherHeaders.split("\r\n\r\n");
                 final var headers = partsHeadersAndBody[0];
                 final var body = partsHeadersAndBody[1];
                 request.setHeaders(headers);
-                System.out.println("headers");
-                System.out.println(request.getHeaders());
-
                 request.setBody(body);
-                System.out.println("body");
-                System.out.println(request.getBody());
             } else {
                 request.setHeaders(otherHeaders);
                 request.setBody(null);
@@ -134,6 +122,6 @@ public class Server {
     }
 
     public void addHandler(String method, String path, Handler handler) {
-        handlers.put(method + path, handler);
+        handlers.put(method+path, handler);
     }
 }
